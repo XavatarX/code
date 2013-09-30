@@ -1,0 +1,11 @@
+This directory contains the code for logging the changes/access to a dictory.
+pyinotify.py does the logging. 
+
+
+
+
+HOW to Run:
+==========
+
+sudo python3 pyinotify.py -r -a /home/
+
