@@ -27,7 +27,6 @@ pyinotify
 @license: MIT License
 @contact: seb@dbzteam.org
 """
-
 class PyinotifyError(Exception):
     """Indicates exceptions raised by a Pyinotify class."""
     pass
@@ -72,6 +71,7 @@ import asyncore
 import glob
 import locale
 import subprocess
+import hashlib
 
 try:
     from functools import reduce
@@ -857,9 +857,8 @@ class _SysProcessEvent(_ProcessEvent):
             dir_ = watch_.dir
         else:
             dir_ = bool(raw_event.mask & IN_ISDIR)
-        dict_ = {'wd': raw_event.wd,
-                 'mask': raw_event.mask,
-                 'path': watch_.path,
+        dict_ = {'mask': raw_event.mask,
+                 'path': hashlib.md5(watch_.path.encode('UTF-8')),
                  'name': raw_event.name,
                  'dir': dir_}
         if COMPATIBILITY_MODE:
