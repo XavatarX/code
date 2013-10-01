@@ -27,6 +27,9 @@ pyinotify
 @license: MIT License
 @contact: seb@dbzteam.org
 """
+
+changeLog = None
+fileLog = None
 class PyinotifyError(Exception):
     """Indicates exceptions raised by a Pyinotify class."""
     pass
@@ -857,10 +860,13 @@ class _SysProcessEvent(_ProcessEvent):
             dir_ = watch_.dir
         else:
             dir_ = bool(raw_event.mask & IN_ISDIR)
-        dict_ = {'mask': raw_event.mask,
-                 'path': hashlib.md5(watch_.path.encode('UTF-8')),
+        dict_ = {'time': str(time.time()*1000000),
+                 'mask': raw_event.mask,
+                 'path': hashlib.md5(watch_.path.encode('UTF-8')).hexdigest(),
                  'name': raw_event.name,
                  'dir': dir_}
+        global changeLog
+        changeLog.write(str(dict_) + "\n")
         if COMPATIBILITY_MODE:
             dict_['is_dir'] = dir_
         if to_append is not None:
@@ -1881,6 +1887,7 @@ class WatchManager:
             for apath in self.__glob(npath, do_glob):
                 # recursively list subdirs according to rec param
                 for rpath in self.__walk_rec(apath, rec):
+                    print (rpath)
                     if not exclude_filter(rpath):
                         wd = ret_[rpath] = self.__add_watch(rpath, mask,
                                                             proc_fun,
@@ -2319,4 +2326,16 @@ def command_line():
 
 
 if __name__ == '__main__':
+    #global changeLog 
+    #global fileTable
+    
+    changeLog = open(".changeLog",  "a")
+    if changeLog == None:
+        print ("Unable to open log file")
+        sys.exit()
+    fileTable = open(".FileTable", "a")
+    if fileTable == None:
+        print ("Unable to open log file")
+        sys.exit()
+
     command_line()
