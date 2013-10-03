@@ -1888,6 +1888,8 @@ class WatchManager:
                 # recursively list subdirs according to rec param
                 for rpath in self.__walk_rec(apath, rec):
                     print (rpath)
+                    global fileTable
+                    fileTable.write(rpath + "," +  hashlib.md5(rpath.encode('UTF-8')).hexdigest() + "\n")
                     if not exclude_filter(rpath):
                         wd = ret_[rpath] = self.__add_watch(rpath, mask,
                                                             proc_fun,
