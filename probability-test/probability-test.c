@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define TOTAL_BYTES	(unsigned int)(2*1000*1000*1000)
+#define TOTAL_BYTES	(unsigned int)((2*1000*1000*1000))
 #define SEARCH_PERCENT	(1)
 #define SEARCH_BYTES	((TOTAL_BYTES/100)*SEARCH_PERCENT)
 #define SEARCH_ITERATION (1000)
 
-#define NUMBER_OF_SERCHES (SEARCH_BYTES)
+#define NUMBER_OF_SERCHES (SEARCH_BYTES *100)
 
 int search(char *  bytes, int * iteration)
 {
@@ -56,7 +56,7 @@ int main ()
 		if (found != -1)
 			printf("%d %d %d\n", i, iteration, found);
 		else {
-			printf("%d -1 -1 -1\n");
+			printf("%d -1 -1 -1\n", i);
 		}
 	}
 	return 0;
