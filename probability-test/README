@@ -7,4 +7,20 @@ This program tries to verify the above claim.
 It initializes a 4GB memory in which only 1% are set to value 0 rest are set to value 1.
 Then it will randomly pick 1000 bytes from the 4GB memory and see if we get atleast one byte with value 0.
 
+TODO::
+======
+
+the random() has a max value of 2 GB. so need a new random function if we want to go beyond 2 GB
+
+Supporting scripts
+==================
+To capture the data into a file and on the screen...
+
+./a.out  | tee output
+
+To divde iterations into range and seeing the frequency of each range..
+
+cat output  | awk '{arr[int($2/50)]++} END {for (var in arr) print var*50, "-",(var+1)*50, ",",  arr[var]}' | sort -n >frequency_output__in_50
+
+
 

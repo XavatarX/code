@@ -7,14 +7,14 @@
 #define SEARCH_BYTES	((TOTAL_BYTES/100)*SEARCH_PERCENT)
 #define SEARCH_ITERATION (1000)
 
-#define NUMBER_OF_SERCHES (1000)
+#define NUMBER_OF_SERCHES (SEARCH_BYTES)
 
 int search(char *  bytes, int * iteration)
 {
 	int i = 0;
 	int rand = 0;
 	// reset the random generator
-	srandom(random()%10000);
+	srandom(random()%random ());
 	for (i = 0; i< SEARCH_ITERATION; i++)
 	{
 		rand = random()%TOTAL_BYTES;
