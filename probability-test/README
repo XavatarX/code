@@ -1,0 +1,10 @@
+"""
+Lets  say that there are X number of blocks.  Out of  these  Y  number of blocks are  having low  erase  value.  This   means that any  of  these Y  blocks can be used by  the  GC.  Let Y  be 1% of  X. 
+Then if we randomly select 1000  blocks from  X then the probability   of  getting atleast 1   block from Y  is 0.99  if  the  number of  blocks in X is 2^32.""
+
+
+This program tries to verify the above claim. 
+It initializes a 4GB memory in which only 1% are set to value 0 rest are set to value 1.
+Then it will randomly pick 1000 bytes from the 4GB memory and see if we get atleast one byte with value 0.
+
+
