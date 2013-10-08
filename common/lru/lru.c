@@ -29,12 +29,13 @@ struct lru_ele* lru_insert (struct lru *lru, uint64 key, uint64 *removed_key)
 		lru->tail->prev = NULL;
 		removed_ele->next = removed_ele->prev = NULL;
 	} else {
-		lru->nelements--;
+		lru->nelements++;
 	}
 	if (removed_ele) {
 		*removed_key = removed_ele->key;
+		free(removed_ele);
 	}
-	return removed_ele;
+	return ele;
 }
 
 uint32 lru_bump (struct lru * lru, struct lru_ele * ele) 
