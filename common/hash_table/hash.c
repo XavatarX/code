@@ -83,7 +83,8 @@ uint32 hash_delete (struct hash_table*table,uint64 key, void ** data)
 	}
 	table->table[table->hash_func(table, key)].nelements--;
 	table->nelements--;
-	*data = hash->data;
+	if (data)
+		*data = hash->data;
 	free(hash);
 	return SUCCESS;
 }

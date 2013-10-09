@@ -6,7 +6,7 @@
 #include "hash.h"
 #include "lru.h"
 
-#define NUM_BUCKETS	(100000)
+#define NUM_BUCKETS	(10000000)
 #define BLOCK_SIZE (512)
 uint64 size = 0;
 uint64 lru_blocks = 0;
