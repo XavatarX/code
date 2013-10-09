@@ -17,14 +17,14 @@ struct hash_table *hash_init(uint32 buckets, uint64 (*hash_func)(struct hash_tab
 		free(table);
 		return NULL;
 	}
-	
+	table->num_tables = buckets;
 	memset(table->table, 0, sizeof(struct hash_table_entries)*buckets);
 	return table;
 }
 
 static struct hash * find_in_list(struct hash *h, uint64 key)
 {
-	while (!h) {
+	while (h) {
 		if (h->key == key){
 			return h;
 		}
@@ -39,7 +39,7 @@ uint32 hash_insert(struct hash_table* table, uint64 key, void* data)
 	struct hash * hash;
 	//search in the list for this element
 
-	if (find_in_list(table->table[table->hash_func(table, key)].next, key) == NULL) {
+	if (find_in_list(table->table[table->hash_func(table, key)].next, key)) {
 		return FAILURE;
 	}
 	hash = malloc(sizeof(struct hash));

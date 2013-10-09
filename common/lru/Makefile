@@ -1,5 +1,5 @@
 
-CFLAGS	= -I../../include  -c
+CFLAGS	= -g -I../../include  -c
 all:lru.o
 
 hash.o:lru.c

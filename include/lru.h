@@ -1,7 +1,7 @@
 #ifndef _LRU_H_
 #define _LRU_H_
 #include "types.h"
-
+#define INVALID_KEY 0xFFFFFFFFFFFFFFFF
 struct lru_ele {
 	uint64 key;
 	struct lru_ele *next;

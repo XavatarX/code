@@ -18,9 +18,15 @@ struct lru_ele* lru_insert (struct lru *lru, uint64 key, uint64 *removed_key)
 {
 	struct lru_ele * removed_ele = NULL;
 	struct lru_ele * ele = malloc(sizeof(*ele));
+	*removed_key = INVALID_KEY;
 	memset(ele, 0, sizeof(*ele));
 	ele->key = key;
 	ele->prev = lru->head;
+	if (lru->head == NULL) {
+		lru->head = lru->tail = ele;
+		lru->nelements++;
+		return ele;
+	}
 	lru->head->next = ele;
 	lru->head = ele;
 	if (lru->nelements == lru->max_elements) {
