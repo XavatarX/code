@@ -44,6 +44,7 @@ uint32 hash_insert(struct hash_table* table, uint64 key, void* data)
 	}
 	hash = malloc(sizeof(struct hash));
 	hash->key = key;
+	hash->data = data;
 	hash->next = table->table[table->hash_func(table, key)].next;
 	table->table[table->hash_func(table, key)].next = hash;
 	table->table[table->hash_func(table, key)].nelements++;
