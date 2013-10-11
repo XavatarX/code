@@ -1,0 +1,13 @@
+this code reads the spc modified formatted file.
+
+
+
+format::
+
+<offset> <len in bytes> <R/W>
+
+
+
+this code reads and maintains a hash of it and maintains LRU... 
+At the end of it tells the hits and misses in the run.....
+ 
