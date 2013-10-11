@@ -13,16 +13,29 @@ int search(char *  bytes, int * iteration)
 {
 	int i = 0;
 	int rand = 0;
+	unsigned char * recorded = NULL;
 	// reset the random generator
 	srandom(random()%random ());
+	recorded = malloc((TOTAL_BYTES/8)+1);
+	memset(recorded, 0, (TOTAL_BYTES/8)+1);
+
 	for (i = 0; i< SEARCH_ITERATION; i++)
 	{
 		rand = random()%TOTAL_BYTES;
-		if (bytes [rand] == 0) {
-			*iteration = i;
-			return rand;
+		if (!(recorded[rand/8] &((1<<(rand%8))))) {
+			
+			recorded[rand/8] = recorded[rand/8] | (1<<(rand%8));
+			if (bytes [rand] == 0) {
+				*iteration = i;
+				free(recorded);
+				return rand;
+			}
+		} else {
+			i--;
 		}
+		
 	}
+	free(recorded);
 	return -1;
 }
 

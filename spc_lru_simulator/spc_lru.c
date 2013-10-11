@@ -33,16 +33,22 @@ int main(int argc, char **argv)
 	uint64 start_blk = 0;
 	uint64 len;
 	uint64 removed_key = INVALID_KEY;
+	int lowmem = 0;
 	struct lru_ele *ele = NULL;
 	int i = 0;
 	char rw = 'W';
-	if (argc != 2) {
-		printf("Usage: ./spc_lru <cache percentage>\n");
+	if (argc != 3) {
+		printf("Usage: ./spc_lru <cache percentage> <lowmemsimulation[0/1]> \n");
 		return -1;
 	}
 	
 	get_size ();
+	lowmem = atoi(argv[2]);
 	lru_blocks = size*atoi(argv[1])/100;
+	if (lowmem) {
+		lru_blocks = lru_blocks - ((lru_blocks*3)/2)/100;
+	}
+
 	table = hash_init(NUM_BUCKETS, hash_func);
 	
 	if (!table) {
