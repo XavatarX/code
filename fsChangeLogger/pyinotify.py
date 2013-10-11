@@ -2331,11 +2331,11 @@ if __name__ == '__main__':
     #global changeLog 
     #global fileTable
     
-    changeLog = open(".changeLog",  "a")
+    changeLog = open("/root/.changeLog",  "a")
     if changeLog == None:
         print ("Unable to open log file")
         sys.exit()
-    fileTable = open(".FileTable", "a")
+    fileTable = open("/root/.FileTable", "a")
     if fileTable == None:
         print ("Unable to open log file")
         sys.exit()
