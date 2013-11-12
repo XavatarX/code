@@ -94,7 +94,7 @@ struct lowmemlru * lru_init (uint32 lruPct, uint32 lruSizeInBlks)
 
 void decrement_tag_count(struct lowmemlru *lru, struct tagTable *tagEntry);
 
-static void remove_blk(struct lowmemlru *lru)
+static int remove_blk(struct lowmemlru *lru)
 {
 	uint32 rand = 0, count = 0;
 	int i = 0, counter = 0;
@@ -130,11 +130,11 @@ static void remove_blk(struct lowmemlru *lru)
 			table->table[i].nelements--;
 			// remove entry from lru.
 			decrement_tag_count (lru, lru->tagTable);		
-			return;
+			return 0;
 		}
 	}
 	printf("--------Didnt find in 1000 iterations\n");
-	return;
+	return 1 ;
 }
 
 static void incement_lowmemlru_iocounter(struct lowmemlru *lru)
@@ -166,7 +166,8 @@ lru_insert (struct lowmemlru *lru, uint64 key, uint64 *removed_key)
 	incement_lowmemlru_iocounter(lru);
 	lru->blocksPresent++;
 	if (lru->blocksPresent > lru->cacheSize) {
-		remove_blk (lru);
+		while (remove_blk (lru)); 
+		lru->blocksPresent--;
 	}
 	return ele;
 }

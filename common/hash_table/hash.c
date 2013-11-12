@@ -56,7 +56,7 @@ uint32 hash_lookup(struct hash_table *table, uint64 key, void ** data)
 {
 	struct hash * hash = find_in_list(table->table[table->hash_func(table, key)].next, key);
 	if (hash) {
-		*data = hash->data;
+		if (data)	*data = hash->data;
 		return SUCCESS;
 	} else {
 		*data = NULL;
