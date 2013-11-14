@@ -1,4 +1,6 @@
-obj-m	+=dummy.o
+obj-m	:= tierfs.o
+tierfs-y	:=dummy.o dentry.o file.o inode.o super.o mmap.o read_write.o 
+
 
 KVERSION = $(shell uname -r)
 all:
