@@ -9,19 +9,22 @@ class FileInfo(object):
     '''
     classdocs
     '''
-    machineID   = uuid.uuid1() 
+    machineID   = None 
     parentID    = 0
     myID        = 0
-    createTime  =   0l
-    lastModifiedTime    = 0l
-    size                = 0l
+    createTime  = 0
+    lastModifiedTime    = 0
+    size                = 0
+    accessType          = 0
 
 
-    def __init__(self):
+    def __init__(self, machineID=None):
         '''
         Constructor
         '''
+        self.machineID = machineID
         pass
+        
     def recordFormat(self):
         return "MachineID,ParentID,myID,CreateTime,lastModifiedTime,size\n"
     
