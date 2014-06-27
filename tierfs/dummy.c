@@ -143,10 +143,29 @@ void tierfs_put_lower_file(struct inode *inode)
 	TRACE_EXIT();
 }
 
-
+enum { tierfs_hdd_path };
+static const match_table_t tokens = {
+	{tierfs_hdd_path, "hdd=%s"}
+};
 struct kmem_cache *tierfs_sb_info_cache;
 static int tierfs_parse_options(struct tierfs_sb_info *sbi, char *options)
 {
+	int token;
+	char *p;
+	substring_t args[MAX_OPT_ARGS];
+	printk(KERN_ERR"Options: %s\n", options);
+	while ((p = strsep(&options, ",")) != NULL) {
+		token = match_token(p, tokens, args);
+		switch (token) {
+			case tierfs_hdd_path:
+				*(args[0].to + 1) = '\0';
+				printk(KERN_ERR" found hdd path %s\n", args[0].from);
+			break;
+			default:
+				printk(KERN_ERR"Invalid options\n");
+				return -1;
+		}
+	}
 	return 0;
 }
 

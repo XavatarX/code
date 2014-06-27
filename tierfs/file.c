@@ -232,6 +232,16 @@ tierfs_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	TRACE_EXIT();
 	return rc;
 }
+ssize_t tierfs_writefile (struct file *file, const char __user *data, size_t size, loff_t *off) 
+{
+	struct file * lower_file = tierfs_file_to_lower(file);
+	return lower_file->f_op->write(file,data, size, off);
+}
+ssize_t tierfs_readfile (struct file *file, char __user *data, size_t size, loff_t *off) 
+{
+	struct file * lower_file = tierfs_file_to_lower(file);
+	return lower_file->f_op->read(file,data, size, off);
+}
 
 #ifdef CONFIG_COMPAT
 static long
@@ -268,8 +278,10 @@ const struct file_operations tierfs_dir_fops = {
 
 const struct file_operations tierfs_main_fops = {
 	.llseek = generic_file_llseek,
+//	.read = tierfs_readfile,
 	.read = do_sync_read,
 	.aio_read = tierfs_read_update_atime,
+//	.write = tierfs_writefile,
 	.write = do_sync_write,
 	.aio_write = generic_file_aio_write,
 	.iterate = tierfs_readdir,
