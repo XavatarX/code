@@ -14,6 +14,26 @@
         android:layout_height="wrap_content"
         android:text="@string/hello_world" />
 
-    <Button android:id="@+id/button1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/button_content" style="?android:attr/buttonStyleSmall" android:layout_alignLeft="@+id/textView1" android:layout_alignParentBottom="true" android:layout_marginBottom="107dp" android:layout_marginLeft="82dp" android:onClick="StartScan"/>
+    <Button
+        android:id="@+id/button1"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/textView1"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="123dp"
+        android:onClick="StartScan"
+        android:text="@string/button_content" />
+
+    <Button
+        android:id="@+id/button2"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/button1"
+        android:layout_alignBottom="@+id/button1"
+        android:layout_alignRight="@+id/textView1"
+        android:onClick="sendMail"
+        android:text="Send Mail" />
 
 </RelativeLayout>
