@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">scanFS</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">This app Scans through you entier device and then generate a report and send it to you. Please forward that report to kanishk.85@gmail.com if you feel thats ok .. </string>
+    <string name="button_content">StartScan</string>
+
+</resources>
