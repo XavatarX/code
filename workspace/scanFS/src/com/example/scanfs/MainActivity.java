@@ -13,18 +13,40 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import java.io.OutputStream;
+
 
 public class MainActivity extends Activity {
 
+	String FILE_PATH = "scanned_data";
 	static {
 		System.loadLibrary("stat");
 	}
+	public class SystemStats {
+		long totalSpace;
+		long spaceUsed;
+		long sizeUsedInLast5Days;
+		long sizeUsedInLast15Days;
+		long sizeUsedInLast30Days;
+		@Override
+		public String toString()
+		{
+			String str = "totalSpace," + Long.toString(totalSpace) + "\r\n";
+			str = str + "spaceUsed," +Long.toString(spaceUsed) + "\r\n";
+			str = str + "sizeUsedInLast5Days," +Long.toString(sizeUsedInLast5Days) + "\r\n";
+			str = str + "sizeUsedInLast15Days," +Long.toString(sizeUsedInLast15Days) + "\r\n";
+			str = str + "sizeUsedInLast30Days," +Long.toString(sizeUsedInLast30Days) + "\r\n";
+			return str;
+		}
+	}
 	public native long getAccessTime(String path);
+	public  SystemStats stats;
 	/*
 	public native long getAccessTime(String path);
 	public Queue<File> qe;
@@ -38,6 +60,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         Button btn = (Button) findViewById(R.id.button2);
     	btn.setEnabled(false);
+    	FILE_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/" + FILE_PATH;
     }
 
     @Override
@@ -138,7 +161,7 @@ public class MainActivity extends Activity {
         protected String doInBackground(String... params) {
         	File f = new File("/");
         	try {
-        		fos=openFileOutput("scanned_data", Context.MODE_WORLD_READABLE);
+        		fos=new FileOutputStream(FILE_PATH,false);
                 osw = new OutputStreamWriter(fos);
 
             }
@@ -253,13 +276,14 @@ public class MainActivity extends Activity {
     	    File fileIn = new File(file);
     	    fileIn.setReadable(true, false);
     	    Uri u = Uri.fromFile(fileIn);
+    	    
     	    uris.add(u);
     	    emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
     	    startActivity(emailIntent);
     	}
     public void sendMail(View view) {
-    	email(getApplicationContext(), "kanishk.85@gmail.com", "kanishk.85@gmail.com", "Android disk usage analysis",
-    			"Disk usage analysis is attached.", "scanned_data");
+    	email(getApplicationContext(), "kanishk.85@gmail.com", "kanishk.85@gmail.com",
+    			"Disk usage analysis is attached.",stats.toString(),  FILE_PATH);
     			
     }
     
