@@ -44,6 +44,9 @@ public class MainActivity extends Activity {
 			str = str + "sizeUsedInLast30Days," +Long.toString(sizeUsedInLast30Days) + "\r\n";
 			return str;
 		}
+		SystemStats() {
+			totalSpace = spaceUsed = sizeUsedInLast5Days = sizeUsedInLast15Days = sizeUsedInLast30Days = 0;
+		}
 	}
 	public native long getAccessTime(String path);
 	public  SystemStats stats;
@@ -61,6 +64,7 @@ public class MainActivity extends Activity {
         Button btn = (Button) findViewById(R.id.button2);
     	btn.setEnabled(false);
     	FILE_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/" + FILE_PATH;
+    	stats = new SystemStats();
     }
 
     @Override
@@ -112,6 +116,14 @@ public class MainActivity extends Activity {
         				if (file.isFile()) {
         					Log.e(TAG,"Getting details " + file.getAbsolutePath());
         	    			String s = file.getAbsolutePath() + "," + file.lastModified() + "," + Long.toString(getAccessTime(file.getAbsolutePath())) +"," + file.length();
+        	    			stats.spaceUsed += file.length();
+        	    			if (getAccessTime(file.getAbsolutePath()) < (5*24*60*60)) {
+        	    				stats.sizeUsedInLast5Days += file.length(); 
+        	    			} else if (getAccessTime(file.getAbsolutePath()) < (15*24*60*60)) {
+        	    				stats.sizeUsedInLast15Days += file.length();
+        	    			} else if (getAccessTime(file.getAbsolutePath()) < (30*24*60*60)) {
+        	    				stats.sizeUsedInLast30Days += file.length();
+        	    			}
         	    			Log.e(TAG,"Got");
         	    			try {
         						osw.append(s);
@@ -156,7 +168,7 @@ public class MainActivity extends Activity {
     			Log.e(TAG, "File Close failed");
     		}
         }
-    	@SuppressWarnings("deprecation")
+
 		@Override
         protected String doInBackground(String... params) {
         	File f = new File("/");
@@ -234,7 +246,7 @@ public class MainActivity extends Activity {
 			Log.e(TAG, "File Close failed");
 		}
     }*/
-    @SuppressWarnings("deprecation")
+
 	public void StartScan(View view) {
 /*    	File f = new File("/");
     	try {
