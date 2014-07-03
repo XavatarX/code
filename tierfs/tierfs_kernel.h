@@ -10,11 +10,34 @@
 #include <linux/backing-dev.h>
 
 #define TIERFS_SUPER_MAGIC (0xC0FFEE)
+
+#define MAX_SUPPORTED_TIER 4
+#define TFS_MAX_PATH_LEN PATH_MAX + 1
+
+typedef enum tfs_tier_type {
+	TFS_TIER_TYPE_PRIMARY,
+	TFS_TIER_TYPE_SECONDARY
+} tfs_tier_type_t;
+
+typedef struct tfs_tier {
+	tfs_tier_type_t tier_type;
+	char tier_path[TFS_MAX_PATH_LEN];
+	struct path tier_kpath;
+} tfs_tier_t;
+
+typedef struct tfs_tier_list {
+	int ntiers;
+	int nkpaths;
+	tfs_tier_t tiers[MAX_SUPPORTED_TIER];
+} tfs_tier_list_t;
+
 /* superblock private data. */
 struct tierfs_sb_info {
-	struct super_block *wsi_sb;
+	int nsbs;
+	struct super_block *wsi_sb[MAX_SUPPORTED_TIER];
 	struct backing_dev_info bdi;
 };
+
 struct tierfs_file_stat {
 	u32 flags;
 };
@@ -108,75 +131,79 @@ tierfs_set_inode_lower(struct inode *inode, struct inode *lower_inode)
 	tierfs_inode_to_private(inode)->wii_inode = lower_inode;
 }
 
-static inline struct tierfs_sb_info *
-tierfs_superblock_to_private(struct super_block *sb)
-{
-	return (struct tierfs_sb_info *)sb->s_fs_info;
-}
+/*
+ * ===============================================
+ *     Superblock related functions and macros
+ * ===============================================
+ */
 
-static inline void
-tierfs_set_superblock_private(struct super_block *sb,
-				struct tierfs_sb_info *sb_info)
+#define tierfs_superblock_to_private(tsb) ((struct tierfs_sb_info *)tsb->s_fs_info)
+#define tierfs_tsb_to_lsb(tsb, i) tierfs_superblock_to_private(tsb)->wsi_sb[i]
+#define tierfs_nlsbs(tsb) tierfs_superblock_to_private(tsb)->nsbs
+#define tierfs_set_superblock_private(tsb, tsb_info) (tsb->s_fs_info = tsb_info)
+
+static inline struct super_block *
+tierfs_lookup_superblock_lower_uuid(struct super_block *tsb, u8 *lsb_uuid)
 {
-	sb->s_fs_info = sb_info;
+	int i;
+
+	for (i = 0; i < tierfs_nlsbs(tsb); i++) {
+		if (memcmp(lsb_uuid, tierfs_tsb_to_lsb(tsb, i)->s_uuid, 16)) {
+			return tierfs_tsb_to_lsb(tsb, i);
+		}
+	}
+
+	return NULL;
 }
 
 static inline struct super_block *
-tierfs_superblock_to_lower(struct super_block *sb)
+tierfs_lookup_superblock_lower(struct super_block *tsb, struct super_block *lsb)
 {
-	return ((struct tierfs_sb_info *)sb->s_fs_info)->wsi_sb;
+	return tierfs_lookup_superblock_lower_uuid(tsb, lsb->s_uuid);
 }
 
 static inline void
-tierfs_set_superblock_lower(struct super_block *sb,
-			      struct super_block *lower_sb)
+tierfs_set_superblock_lower(struct super_block *tsb,
+			      struct super_block *lsb)
 {
-	((struct tierfs_sb_info *)sb->s_fs_info)->wsi_sb = lower_sb;
+	if (MAX_SUPPORTED_TIER <= tierfs_nlsbs(tsb))
+		return;
+	tierfs_tsb_to_lsb(tsb, tierfs_nlsbs(tsb)) = lsb;
 }
 
-static inline struct tierfs_dentry_info *
-tierfs_dentry_to_private(struct dentry *dentry)
-{
-	return (struct tierfs_dentry_info *)dentry->d_fsdata;
-}
 
-static inline void
-tierfs_set_dentry_private(struct dentry *dentry,
-			    struct tierfs_dentry_info *dentry_info)
-{
-	dentry->d_fsdata = dentry_info;
-}
+/*
+ * ===============================================
+ *     dentry related functions and macros
+ * ===============================================
+ */
 
-static inline struct dentry *
-tierfs_dentry_to_lower(struct dentry *dentry)
-{
-	return ((struct tierfs_dentry_info *)dentry->d_fsdata)->lower_path.dentry;
-}
+#define tierfs_dentry_to_private(tdentry) \
+		((struct tierfs_dentry_info *)tdentry->d_fsdata)
 
-static inline void
-tierfs_set_dentry_lower(struct dentry *dentry, struct dentry *lower_dentry)
-{
-	((struct tierfs_dentry_info *)dentry->d_fsdata)->lower_path.dentry =
-		lower_dentry;
-}
+#define tierfs_dentry_to_lower_path(tdentry) \
+		(&tierfs_dentry_to_private(tdentry)->lower_path)
 
-static inline struct vfsmount *
-tierfs_dentry_to_lower_mnt(struct dentry *dentry)
-{
-	return ((struct tierfs_dentry_info *)dentry->d_fsdata)->lower_path.mnt;
-}
+#define tierfs_dentry_to_lower(tdentry) \
+		tierfs_dentry_to_lower_path(tdentry)->dentry
 
-static inline struct path *
-tierfs_dentry_to_lower_path(struct dentry *dentry)
-{
-	return &((struct tierfs_dentry_info *)dentry->d_fsdata)->lower_path;
-}
+#define tierfs_dentry_to_lower_mnt(tdentry) \
+		tierfs_dentry_to_lower_path(tdentry)->mnt
+
+#define tierfs_set_dentry_private(tdentry, tdentry_info) \
+		tdentry->d_fsdata = tdentry_info
+
+#define tierfs_set_dentry_lower_dentry(tdentry, ldentry) \
+		tierfs_dentry_to_lower(tdentry) = ldentry
+
+#define tierfs_set_dentry_lower_mnt(tdentry, lmnt) \
+		tierfs_dentry_to_lower_mnt(tdentry) = lmnt
 
 static inline void
-tierfs_set_dentry_lower_mnt(struct dentry *dentry, struct vfsmount *lower_mnt)
+tierfs_set_dentry_lower_path(struct dentry *tfs_dentry, struct path *lower_path)
 {
-	((struct tierfs_dentry_info *)dentry->d_fsdata)->lower_path.mnt =
-		lower_mnt;
+	tierfs_set_dentry_lower_dentry(tfs_dentry, lower_path->dentry);
+	tierfs_set_dentry_lower_mnt(tfs_dentry, lower_path->mnt);
 }
 
 #define tierfs_printk(type, fmt, arg...) \

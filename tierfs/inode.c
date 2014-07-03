@@ -38,7 +38,7 @@ static int tierfs_inode_test(struct inode *inode, void *lower_inode)
 	TRACE_EXIT();
 	return 0;
 }
-
+// inode is a tierfs_inode.
 static int tierfs_inode_set(struct inode *inode, void *opaque)
 {
 	struct inode *lower_inode = opaque;
@@ -70,38 +70,41 @@ static int tierfs_inode_set(struct inode *inode, void *opaque)
 		inode->i_fop = &tierfs_main_fops;
 
 	TRACE_EXIT();
+
 	return 0;
 }
 
 
 static struct inode *__tierfs_get_inode(struct inode *lower_inode,
-					  struct super_block *sb)
+					  struct super_block *tsb)
 {
-	struct inode *inode;
+	struct inode *tfs_inode;
 
 	TRACE_ENTRY();
-	if (lower_inode->i_sb != tierfs_superblock_to_lower(sb))
+
+	if (!tierfs_lookup_superblock_lower(tsb, lower_inode->i_sb))
 		return ERR_PTR(-EXDEV);
 	if (!igrab(lower_inode))
 		return ERR_PTR(-ESTALE);
-	inode = iget5_locked(sb, (unsigned long)lower_inode,
+	tfs_inode = iget5_locked(tsb, (unsigned long)lower_inode,
 			     tierfs_inode_test, tierfs_inode_set,
 			     lower_inode);
-	if (!inode) {
+	if (!tfs_inode) {
 		iput(lower_inode);
 		return ERR_PTR(-EACCES);
 	}
-	if (!(inode->i_state & I_NEW))
+	if (!(tfs_inode->i_state & I_NEW))
 		iput(lower_inode);
 
 	TRACE_EXIT();
-	return inode;
+
+	return tfs_inode;
 }
 
 struct inode *tierfs_get_inode(struct inode *lower_inode,
-				 struct super_block *sb)
+				 struct super_block *tsb)
 {
-	struct inode *inode = __tierfs_get_inode(lower_inode, sb);
+	struct inode *inode = __tierfs_get_inode(lower_inode, tsb);
 
 	TRACE_ENTRY();
 	if (!IS_ERR(inode) && (inode->i_state & I_NEW))
@@ -310,7 +313,7 @@ static int tierfs_lookup_interpose(struct dentry *dentry,
 	BUG_ON(!d_count(lower_dentry));
 
 	tierfs_set_dentry_private(dentry, dentry_info);
-	tierfs_set_dentry_lower(dentry, lower_dentry);
+	tierfs_set_dentry_lower_dentry(dentry, lower_dentry);
 	tierfs_set_dentry_lower_mnt(dentry, lower_mnt);
 
 	if (!lower_dentry->d_inode) {

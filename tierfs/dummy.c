@@ -16,7 +16,7 @@
 
 static struct file_system_type tierfs_fs_type;
 static void tierfs_free_kmem_caches(void);
-int tierfs_verbosity = 0;
+int tierfs_verbosity = 1;
 void __tierfs_printk(const char *fmt, ...)
 {
 	va_list args;
@@ -143,10 +143,38 @@ void tierfs_put_lower_file(struct inode *inode)
 	TRACE_EXIT();
 }
 
-enum { tierfs_hdd_path };
+enum { tierfs_stier_path, tierfs_ptier_path };
 static const match_table_t tokens = {
-	{tierfs_hdd_path, "hdd=%s"}
+	{tierfs_stier_path, "stier=%s"},
+	{tierfs_ptier_path, "ptier=%s"}
 };
+
+tfs_tier_list_t tfs_tier_list = {0};
+
+int tierfs_add_tier_path(const char *tier_path, int tier_type)
+{
+	int rc = 0;
+
+	if (!tier_path) {
+		printk(KERN_ERR"ERROR: NULL pointer passed!\n");
+		rc = -EINVAL;
+		goto out;
+	}
+
+	if (tfs_tier_list.ntiers < MAX_SUPPORTED_TIER) {
+		tfs_tier_list.tiers[tfs_tier_list.ntiers].tier_type = tier_type;
+		memcpy(&tfs_tier_list.tiers[tfs_tier_list.ntiers++].tier_path,
+			tier_path, TFS_MAX_PATH_LEN);
+		printk(KERN_ERR"Adding hdd path: %s\n", tier_path);
+	} else {
+		printk(KERN_ERR"ERROR: Only %d no of tier paths are supported.\n", MAX_SUPPORTED_TIER);
+		rc = -EINVAL;
+	}
+
+out:
+	return rc;
+}
+
 struct kmem_cache *tierfs_sb_info_cache;
 static int tierfs_parse_options(struct tierfs_sb_info *sbi, char *options)
 {
@@ -157,128 +185,182 @@ static int tierfs_parse_options(struct tierfs_sb_info *sbi, char *options)
 	while ((p = strsep(&options, ",")) != NULL) {
 		token = match_token(p, tokens, args);
 		switch (token) {
-			case tierfs_hdd_path:
+			case tierfs_stier_path:
 				*(args[0].to + 1) = '\0';
-				printk(KERN_ERR" found hdd path %s\n", args[0].from);
+				tierfs_add_tier_path(args[0].from, TFS_TIER_TYPE_SECONDARY);
 			break;
 			default:
 				printk(KERN_ERR"Invalid options\n");
 				return -1;
 		}
 	}
+
 	return 0;
+}
+
+static void tierfs_put_kpath_all(void)
+{
+	int i;
+
+	for (i = 0; i < tfs_tier_list.nkpaths; i++) {
+		struct path *kpath = &tfs_tier_list.tiers[i].tier_kpath;
+		path_put(kpath);
+	}
+}
+
+static struct path * tierfs_get_ptier_kpath(void)
+{
+	int i;
+	struct path *kpath = NULL;
+
+	for (i = 0; i < tfs_tier_list.nkpaths; i++) {
+		if (tfs_tier_list.tiers[i].tier_type == TFS_TIER_TYPE_PRIMARY) {
+			kpath = &tfs_tier_list.tiers[i].tier_kpath;
+			break;
+		}
+	}
+
+	return kpath;
+}
+
+static int tierfs_set_superblock_lower_all(struct super_block *tsb)
+{
+	int rc, i;
+	struct path *kpath;
+
+	for (i = 0; i < tfs_tier_list.ntiers; i++) {
+		char *tier_path = tfs_tier_list.tiers[i].tier_path;
+		kpath = &tfs_tier_list.tiers[i].tier_kpath;
+
+		rc = kern_path(tier_path, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, kpath);
+		if (rc) {
+			tierfs_printk(KERN_WARNING,
+				"kern_path() failed for path %s\n", tier_path);
+			goto out;
+		}
+
+		tfs_tier_list.nkpaths++;
+		if (kpath->dentry->d_sb->s_type == &tierfs_fs_type) {
+			rc = -EINVAL;
+			printk(KERN_ERR "Mount on filesystem of type "
+				"tierfs explicitly disallowed due to "
+				"known incompatibilities\n");
+			goto out;
+		}
+
+		tierfs_set_superblock_lower(tsb, kpath->dentry->d_sb);
+	}
+
+	return 0;
+out:
+	tierfs_put_kpath_all();
+	return rc;
 }
 
 static struct dentry *tierfs_mount(struct file_system_type *fs_type, int flags,
 			const char *dev_name, void *raw_data)
 {
-	struct super_block *s;
-	struct tierfs_sb_info *sbi;
-	struct tierfs_dentry_info *root_info;
+	struct super_block *tfs_sb;
+	struct tierfs_sb_info *tfs_sbi;
+	struct tierfs_dentry_info *tfs_root_info;
 	const char *err = "Getting sb failed";
-	struct inode *inode;
-	struct path path;
+	struct path *kpath;
+	struct inode *tfs_inode;
 	int rc;
 
 	TRACE_ENTRY();
-	sbi = kmem_cache_zalloc(tierfs_sb_info_cache, GFP_KERNEL);
-	if (!sbi) {
+
+	tfs_sbi = kmem_cache_zalloc(tierfs_sb_info_cache, GFP_KERNEL);
+	if (!tfs_sbi) {
 		rc = -ENOMEM;
 		goto out;
 	}
-	rc = tierfs_parse_options(sbi, raw_data);
+
+	rc = tierfs_parse_options(tfs_sbi, raw_data);
 	if (rc) {
 		err = "Error parsing options";
 		goto out;
 	}
 
-	s = sget(fs_type, NULL, set_anon_super, flags, NULL);
-	if (IS_ERR(s)) {
-		rc = PTR_ERR(s);
+	rc = tierfs_add_tier_path(dev_name, TFS_TIER_TYPE_PRIMARY);
+	if (rc) {
+		err = "Error durring adding path";
 		goto out;
 	}
 
-	rc = bdi_setup_and_register(&sbi->bdi, "tierfs", BDI_CAP_MAP_COPY);
+	tfs_sb = sget(fs_type, NULL, set_anon_super, flags, NULL);
+	if (IS_ERR(tfs_sb)) {
+		rc = PTR_ERR(tfs_sb);
+		goto out;
+	}
+
+	rc = bdi_setup_and_register(&tfs_sbi->bdi, "tierfs", BDI_CAP_MAP_COPY);
 	if (rc)
 		goto out1;
 
-	tierfs_set_superblock_private(s, sbi);
-	s->s_bdi = &sbi->bdi;
+	tierfs_set_superblock_private(tfs_sb, tfs_sbi);
+	tfs_sb->s_bdi = &tfs_sbi->bdi;
 
 	/* ->kill_sb() will take care of sbi after that point */
-	sbi = NULL;
-	s->s_op = &tierfs_sops;
-	s->s_d_op = &tierfs_dops;
+	tfs_sbi = NULL;
+	tfs_sb->s_op = &tierfs_sops;
+	tfs_sb->s_d_op = &tierfs_dops;
 
-	err = "Reading sb failed";
-	rc = kern_path(dev_name, LOOKUP_FOLLOW | LOOKUP_DIRECTORY, &path);
+	rc = tierfs_set_superblock_lower_all(tfs_sb);
 	if (rc) {
-		tierfs_printk(KERN_WARNING, "kern_path() failed\n");
-		goto out1;
+		goto out;
 	}
-	if (path.dentry->d_sb->s_type == &tierfs_fs_type) {
-		rc = -EINVAL;
-		printk(KERN_ERR "Mount on filesystem of type "
-			"tierfs explicitly disallowed due to "
-			"known incompatibilities\n");
+
+	kpath = tierfs_get_ptier_kpath();
+	if (!kpath) {
 		goto out_free;
 	}
-#if 0
-	if (check_ruid && !uid_eq(path.dentry->d_inode->i_uid, current_uid())) {
-		rc = -EPERM;
-		printk(KERN_ERR "Mount of device (uid: %d) not owned by "
-		       "requested user (uid: %d)\n",
-			i_uid_read(path.dentry->d_inode),
-			from_kuid(&init_user_ns, current_uid()));
-		goto out_free;
-	}
-#endif
-	tierfs_set_superblock_lower(s, path.dentry->d_sb);
 
 	/**
 	 * Set the POSIX ACL flag based on whether they're enabled in the lower
 	 * mount. Force a read-only tierfs mount if the lower mount is ro.
 	 * Allow a ro tierfs mount even when the lower mount is rw.
 	 */
-	s->s_flags = flags & ~MS_POSIXACL;
-	s->s_flags |= path.dentry->d_sb->s_flags & (MS_RDONLY | MS_POSIXACL);
+	tfs_sb->s_flags = flags & ~MS_POSIXACL;
+	tfs_sb->s_flags |= kpath->dentry->d_sb->s_flags & (MS_RDONLY | MS_POSIXACL);
 
-	s->s_maxbytes = path.dentry->d_sb->s_maxbytes;
-	s->s_blocksize = path.dentry->d_sb->s_blocksize;
-	s->s_magic = TIERFS_SUPER_MAGIC;
+	tfs_sb->s_maxbytes = kpath->dentry->d_sb->s_maxbytes;
+	tfs_sb->s_blocksize = kpath->dentry->d_sb->s_blocksize;
+	tfs_sb->s_magic = TIERFS_SUPER_MAGIC;
 
-	inode = tierfs_get_inode(path.dentry->d_inode, s);
-	rc = PTR_ERR(inode);
-	if (IS_ERR(inode))
+	tfs_inode = tierfs_get_inode(kpath->dentry->d_inode, tfs_sb);
+	rc = PTR_ERR(tfs_inode);
+	if (IS_ERR(tfs_inode))
 		goto out_free;
 
-	s->s_root = d_make_root(inode);
-	if (!s->s_root) {
+	tfs_sb->s_root = d_make_root(tfs_inode);
+	if (!tfs_sb->s_root) {
 		rc = -ENOMEM;
 		goto out_free;
 	}
 
 	rc = -ENOMEM;
-	root_info = kmem_cache_zalloc(tierfs_dentry_info_cache, GFP_KERNEL);
-	if (!root_info)
+	tfs_root_info = kmem_cache_zalloc(tierfs_dentry_info_cache, GFP_KERNEL);
+	if (!tfs_root_info)
 		goto out_free;
 
 	/* ->kill_sb() will take care of root_info */
-	tierfs_set_dentry_private(s->s_root, root_info);
-	tierfs_set_dentry_lower(s->s_root, path.dentry);
-	tierfs_set_dentry_lower_mnt(s->s_root, path.mnt);
+	tierfs_set_dentry_private(tfs_sb->s_root, tfs_root_info);
+	tierfs_set_dentry_lower_path(tfs_sb->s_root, kpath);
 
-	s->s_flags |= MS_ACTIVE;
+	tfs_sb->s_flags |= MS_ACTIVE;
 	TRACE_EXIT();
-	return dget(s->s_root);
+	return dget(tfs_sb->s_root);
 
 out_free:
-	path_put(&path);
+	tierfs_put_kpath_all();
+	tfs_tier_list.ntiers = 0;
+
 out1:
-	deactivate_locked_super(s);
+	deactivate_locked_super(tfs_sb);
 out:
-	if (sbi) {
-		kmem_cache_free(tierfs_sb_info_cache, sbi);
+	if (tfs_sbi) {
+		kmem_cache_free(tierfs_sb_info_cache, tfs_sbi);
 	}
 	printk(KERN_ERR "%s; rc = [%d]\n", err, rc);
 	TRACE_EXIT();
@@ -289,7 +371,7 @@ out:
 static void tierfs_kill_block_super(struct super_block *sb)
 {
 	struct tierfs_sb_info *sb_info = tierfs_superblock_to_private(sb);
-	
+
 	TRACE_ENTRY();
 	kill_anon_super(sb);
 	if (!sb_info)
@@ -423,10 +505,7 @@ static void __exit tierfs_exit(void)
 	TRACE_EXIT();
 }
 
-	
-
-
-
 module_init(tierfs_init)
 module_exit(tierfs_exit)
 MODULE_LICENSE("GPL");
+

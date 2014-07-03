@@ -21,9 +21,9 @@
 static int tierfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
 	struct dentry *lower_dentry;
-	TRACE_ENTRY();
 	int rc = 1;
 
+	TRACE_ENTRY();
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 
