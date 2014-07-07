@@ -136,6 +136,13 @@ tierfs_set_inode_lower(struct inode *inode, struct inode *lower_inode)
  *     Superblock related functions and macros
  * ===============================================
  */
+#define print_uuid(uuid) \
+	        printk(KERN_WARNING "UUID: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",\
+                uuid[0], uuid[1], uuid[2], uuid[3], \
+                uuid[4], uuid[5],\
+                uuid[6], uuid[7], \
+                uuid[8], uuid[9], \
+                uuid[10], uuid[11], uuid[12], uuid[13], uuid[14],uuid[15])
 
 #define tierfs_superblock_to_private(tsb) ((struct tierfs_sb_info *)tsb->s_fs_info)
 #define tierfs_tsb_to_lsb(tsb, i) tierfs_superblock_to_private(tsb)->wsi_sb[i]
@@ -169,6 +176,7 @@ tierfs_set_superblock_lower(struct super_block *tsb,
 	if (MAX_SUPPORTED_TIER <= tierfs_nlsbs(tsb))
 		return;
 	tierfs_tsb_to_lsb(tsb, tierfs_nlsbs(tsb)) = lsb;
+	tierfs_nlsbs(tsb)++;
 }
 
 

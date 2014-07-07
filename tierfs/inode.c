@@ -82,8 +82,10 @@ static struct inode *__tierfs_get_inode(struct inode *lower_inode,
 
 	TRACE_ENTRY();
 
-	if (!tierfs_lookup_superblock_lower(tsb, lower_inode->i_sb))
-		return ERR_PTR(-EXDEV);
+	//if (!tierfs_lookup_superblock_lower(tsb, lower_inode->i_sb))
+	//	return ERR_PTR(-EXDEV);
+	print_uuid(lower_inode->i_sb->s_uuid);
+
 	if (!igrab(lower_inode))
 		return ERR_PTR(-ESTALE);
 	tfs_inode = iget5_locked(tsb, (unsigned long)lower_inode,
