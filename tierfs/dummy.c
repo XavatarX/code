@@ -163,6 +163,7 @@ int tierfs_add_tier_path(const char *tier_path, int tier_type)
 
 	if (tfs_tier_list.ntiers < MAX_SUPPORTED_TIER) {
 		tfs_tier_list.tiers[tfs_tier_list.ntiers].tier_type = tier_type;
+		//Shouldnt this path len copy be = strlen (tier_path)
 		memcpy(&tfs_tier_list.tiers[tfs_tier_list.ntiers++].tier_path,
 			tier_path, TFS_MAX_PATH_LEN);
 		printk(KERN_ERR"Adding hdd path: %s\n", tier_path);
