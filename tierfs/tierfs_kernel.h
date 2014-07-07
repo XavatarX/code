@@ -155,7 +155,7 @@ tierfs_lookup_superblock_lower_uuid(struct super_block *tsb, u8 *lsb_uuid)
 	int i;
 
 	for (i = 0; i < tierfs_nlsbs(tsb); i++) {
-		if (memcmp(lsb_uuid, tierfs_tsb_to_lsb(tsb, i)->s_uuid, 16)) {
+		if (!memcmp(lsb_uuid, tierfs_tsb_to_lsb(tsb, i)->s_uuid, 16)) {
 			return tierfs_tsb_to_lsb(tsb, i);
 		}
 	}
